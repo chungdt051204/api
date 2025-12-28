@@ -1,7 +1,10 @@
 FROM php:8.2-apache
 
-# Copy file login.php vào thư mục chạy web của server
-COPY login.php /var/www/html/
+# Copy TOÀN BỘ file từ thư mục máy tính (bao gồm index.php, login.php,...) vào server
+COPY . /var/www/html/
 
-# Mở cổng 80 để truy cập từ ngoài
+# Cấp quyền cho Apache có thể đọc file
+RUN chown -R www-data:www-data /var/www/html
+
+# Mở cổng 80
 EXPOSE 80
