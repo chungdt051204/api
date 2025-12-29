@@ -71,7 +71,7 @@ switch ($action) {
             // Reset lại chỉ số mảng và lưu vào file
             $currentData = array_values($currentData);
             file_put_contents($storageFile, json_encode($currentData, JSON_UNESCAPED_UNICODE));
-            echo json_encode(["message" => "Xoa thanh cong"]);
+            echo json_encode(["message" => "1"]);
         } else {
             echo json_encode(["error" => "Khong tim thay ma mon an: $idmonan"]);
         }
