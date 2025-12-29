@@ -1,72 +1,83 @@
 <?php
-session_start();
 header('Content-Type: application/json; charset=utf-8');
+$storageFile = 'data.json';
 
-// Khởi tạo dữ liệu giả ban đầu nếu chưa có trong session
-if (!isset($_SESSION['data_monan'])) {
-    $_SESSION['data_monan'] = [
+// 1. Khởi tạo dữ liệu mẫu nếu file chưa tồn tại
+if (!file_exists($storageFile)) {
+    $initialData = [
         ["ma" => 1, "ten" => "Pho"],
         ["ma" => 2, "ten" => "Cha ca"],
         ["ma" => 3, "ten" => "Cao lau"]
     ];
+    file_put_contents($storageFile, json_encode($initialData, JSON_UNESCAPED_UNICODE));
 }
 
-// Lấy các tham số từ URL (GET)
-$action = isset($_GET['action']) ? $_GET['action'] : '';
-$mssv   = isset($_GET['mssv']) ? $_GET['mssv'] : '';
+// Đọc dữ liệu hiện tại từ file
+$currentData = json_decode(file_get_contents($storageFile), true);
 
-// Kiểm tra MSSV (Giả sử MSSV không được để trống)
+// 2. Lấy các tham số từ phương thức GET
+$action = $_GET['action'] ?? '';
+$mssv   = $_GET['mssv'] ?? '';
+
+// Kiểm tra MSSV (luôn phải có theo yêu cầu đề bài)
 if (empty($mssv)) {
     echo json_encode(["error" => "Thieu tham so mssv"]);
     exit;
 }
 
-// Xử lý các chức năng theo yêu cầu đề thi
+// 3. Xử lý các hành động
 switch ($action) {
     
-    // 1. LẤY DANH SÁCH MÓN ĂN
+    // LẤY TẤT CẢ MÓN ĂN
     case 'getallmonan':
-        echo json_encode($_SESSION['data_monan']);
+        echo json_encode($currentData, JSON_UNESCAPED_UNICODE);
         break;
 
-    // 2. THÊM MỘT MÓN ĂN
+    // THÊM MỘT MÓN ĂN
     case 'addsinglemon':
-        $tenmon = isset($_GET['tenmon']) ? $_GET['tenmon'] : '';
+        $tenmon = $_GET['tenmon'] ?? '';
         if (!empty($tenmon)) {
-            // Tạo ID tự động tăng
-            $new_id = end($_SESSION['data_monan'])['ma'] + 1;
-            $_SESSION['data_monan'][] = ["ma" => $new_id, "ten" => $tenmon];
+            // Lấy ID lớn nhất hiện tại cộng thêm 1
+            $lastItem = end($currentData);
+            $newId = ($lastItem) ? $lastItem['ma'] + 1 : 1;
             
-            // Trả về theo mẫu: {"message":"80"}
-            echo json_encode(["message" => (string)$new_id]);
+            $newEntry = ["ma" => $newId, "ten" => $tenmon];
+            $currentData[] = $newEntry; 
+            
+            // Lưu lại vào file JSON
+            file_put_contents($storageFile, json_encode($currentData, JSON_UNESCAPED_UNICODE));
+            
+            echo json_encode(["message" => (string)$newId]);
         } else {
             echo json_encode(["message" => "0"]); // Thêm thất bại
         }
         break;
 
-    // 3. XÓA MỘT MÓN ĂN
+    // XÓA MỘT MÓN ĂN
     case 'delete':
-        $idmonan = isset($_GET['idmonan']) ? (int)$_GET['idmonan'] : 0;
-        $found = false;
+        $idmonan = isset($_GET['idmonan']) ? (int)$_GET['idmonan'] : -1;
+        $isDeleted = false;
 
-        foreach ($_SESSION['data_monan'] as $key => $monan) {
-            if ($monan['ma'] === $idmonan) {
-                unset($_SESSION['data_monan'][$key]);
-                $_SESSION['data_monan'] = array_values($_SESSION['data_monan']); // Reset index mảng
-                $found = true;
+        // Tìm và xóa phần tử
+        foreach ($currentData as $key => $item) {
+            if ($item['ma'] === $idmonan) {
+                unset($currentData[$key]);
+                $isDeleted = true;
                 break;
             }
         }
 
-        if ($found) {
+        if ($isDeleted) {
+            // Reset lại chỉ số mảng và lưu vào file
+            $currentData = array_values($currentData);
+            file_put_contents($storageFile, json_encode($currentData, JSON_UNESCAPED_UNICODE));
             echo json_encode(["message" => "Xoa thanh cong"]);
         } else {
-            echo json_encode(["error" => "Khong tim thay mon an de xoa"]);
+            echo json_encode(["error" => "Khong tim thay ma mon an: $idmonan"]);
         }
         break;
 
     default:
-        echo json_encode(["error" => "Hanh dong (action) khong hop le"]);
+        echo json_encode(["error" => "Hanh dong khong hop le"]);
         break;
 }
-?>
